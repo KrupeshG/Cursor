@@ -6,6 +6,7 @@ if (!defined('ABSPATH')) {
 class ICartDL_Shortcode {
 	public static function register() {
 		add_shortcode('icart_dynamic_page', array(__CLASS__, 'render'));
+		add_shortcode('icart_dynamic_snippet', array(__CLASS__, 'render_snippet'));
 	}
 
 	public static function render($atts) {
@@ -88,6 +89,65 @@ class ICartDL_Shortcode {
 		</section>
 		<?php
 		return ob_get_clean();
+	}
+
+	public static function render_snippet($atts) {
+		$atts = shortcode_atts(array(
+			'keywords' => '',
+			'class' => '',
+		), $atts, 'icart_dynamic_snippet');
+
+		$keywords = trim($atts['keywords']);
+		if ($keywords === '') {
+			$keywords = icart_dl_get_search_keywords();
+		}
+		$content = ICartDL_Content_Generator::generate($keywords);
+		$title = isset($content['title']) && $content['title'] !== '' ? $content['title'] : ($content['heading'] ?? '');
+		$short = isset($content['short_description']) && $content['short_description'] !== '' ? $content['short_description'] : ($content['explanation'] ?? '');
+
+		$extra_class = $atts['class'] ? ' ' . sanitize_html_class($atts['class']) : '';
+
+		ob_start();
+		?>
+		<div class="icart-dl-snippet<?php echo esc_attr($extra_class); ?>">
+			<?php if ($title) : ?>
+				<h1 class="icart-dl__title"><?php echo esc_html($title); ?></h1>
+			<?php endif; ?>
+			<?php if ($short) : ?>
+				<p class="icart-dl__subtitle"><?php echo esc_html($short); ?></p>
+			<?php endif; ?>
+		</div>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * Auto-inject snippet on normal pages if enabled via filter.
+	 * Usage: add_filter('icart_dl_auto_snippet', '__return_true');
+	 */
+	public static function maybe_inject_into_content($content) {
+		$enable = apply_filters('icart_dl_auto_snippet', false);
+		if (!is_singular() || !in_the_loop() || !is_main_query() || !$enable) {
+			return $content;
+		}
+		$keywords = icart_dl_get_search_keywords();
+		if ($keywords === '') {
+			return $content;
+		}
+		$cg = ICartDL_Content_Generator::generate($keywords);
+		$title = isset($cg['title']) && $cg['title'] !== '' ? $cg['title'] : ($cg['heading'] ?? '');
+		$short = isset($cg['short_description']) && $cg['short_description'] !== '' ? $cg['short_description'] : ($cg['explanation'] ?? '');
+		if ($title === '' && $short === '') {
+			return $content;
+		}
+		$snippet = '';
+		if ($title !== '') {
+			$snippet .= '<h1 class="icart-dl__title">' . esc_html($title) . '</h1>';
+		}
+		if ($short !== '') {
+			$snippet .= '<p class="icart-dl__subtitle">' . esc_html($short) . '</p>';
+		}
+		return $snippet . $content;
 	}
 }
 

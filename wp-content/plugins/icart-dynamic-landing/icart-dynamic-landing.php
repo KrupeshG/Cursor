@@ -35,7 +35,11 @@ function icart_dl_init() {
 		define('DL_TRANSIENT_PREFIX', 'icart_dl_');
 	}
 
-	// Shortcode no longer required (direct routing)
+	// Register shortcodes
+	if (class_exists('ICartDL_Shortcode')) {
+		ICartDL_Shortcode::register();
+		add_filter('the_content', array('ICartDL_Shortcode', 'maybe_inject_into_content'), 5);
+	}
 
 	// Admin settings page
 	if (is_admin()) {
@@ -96,12 +100,10 @@ function icart_dl_activate() {
 		'perplexity_api_key' => '',
 		'perplexity_model' => 'sonar-pro',
 		'brand_tone' => 'Clear, helpful, confident, conversion-focused. Keep it concise and benefit-led.',
-		'figma_url' => '',
 		'cache_ttl' => 3600,
 		'mapping' => array(),
 		'landing_map' => array(),
 		'landing_page_slug' => 'dynamic-landing',
-		'base_path' => 'solutions',
 	);
 	$options = get_option('icart_dl_settings', array());
 	update_option('icart_dl_settings', wp_parse_args($options, $defaults));
