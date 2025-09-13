@@ -104,3 +104,5 @@ function wpwv_estimate_valuation() {
 	));
 }
 
+// No email filters are needed when using the existing WPForms hidden field (ID 20)
+
